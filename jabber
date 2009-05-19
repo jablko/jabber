@@ -1,0 +1,87 @@
+#!/usr/bin/env python
+
+import svn.fs, svn.repos, sys
+from twisted.internet import reactor
+from twisted.words.protocols.jabber import client, jid, xmlstream
+from twisted.words.xish import domish
+
+def rawDataIn(data):
+  print 'RECV: ' + data
+
+def rawDataOut(data):
+  print 'SEND: ' + data
+
+class Jabber:
+  def initFailed(self, failure):
+    self.xmlstream.sendFooter()
+
+  def presence(self, element):
+
+    # Open Subversion repository
+    repos = svn.repos.svn_repos_open(sys.argv[1])
+    fs = svn.repos.svn_repos_fs(repos)
+
+    author = svn.fs.revision_prop(fs, int(sys.argv[2]), svn.core.SVN_PROP_REVISION_AUTHOR)
+    log = svn.fs.revision_prop(fs, int(sys.argv[2]), svn.core.SVN_PROP_REVISION_LOG)
+
+    if 80 < len(log):
+      log = log[:77] + '...'
+
+    content = author + ' * r' + sys.argv[2] + ' ' + log
+
+    message = domish.Element((None, 'message'))
+    message['to'] = element['from']
+    message.addElement('body', content=content)
+
+    self.xmlstream.send(message)
+
+    self.xmlstream.sendFooter()
+
+  def authd(self, xmlstream):
+    self.xmlstream = xmlstream
+
+    self.xmlstream.addObserver('/presence', self.presence)
+
+    presence = domish.Element((None, 'presence'))
+
+    self.xmlstream.send(presence)
+
+    # Timeout
+    reactor.callLater(5, self.xmlstream.sendFooter)
+
+  def connected(self, xmlstream):
+    self.xmlstream = xmlstream
+
+    self.xmlstream.rawDataInFn = rawDataIn
+    self.xmlstream.rawDataOutFn = rawDataOut
+
+  def end(self, xmlstream):
+    self.xmlstream = xmlstream
+
+    reactor.stop()
+
+# Check arguments and print usage
+if 5 != len(sys.argv):
+  print """
+%s requires four arguments,
+
+  [1] REPOS-PATH   (the path to the repository)
+  [2] REV          (the number of the revision)
+  [3] EMAIL        (the Google account email)
+  [4] PASSWORD     (the Google account password)
+""" % sys.argv[0]
+
+  sys.exit(1)
+
+jabber = Jabber()
+
+jid = jid.JID(sys.argv[3])
+
+factory = client.XMPPClientFactory(jid, sys.argv[4])
+factory.addBootstrap(xmlstream.INIT_FAILED_EVENT, jabber.initFailed)
+factory.addBootstrap(xmlstream.STREAM_AUTHD_EVENT, jabber.authd)
+factory.addBootstrap(xmlstream.STREAM_CONNECTED_EVENT, jabber.connected)
+factory.addBootstrap(xmlstream.STREAM_END_EVENT, jabber.end)
+
+reactor.connectTCP('talk.google.com', 5222, factory)
+reactor.run()
