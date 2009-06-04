@@ -33,6 +33,15 @@ class Jabber:
     body = message.addElement('body')
     body.addContent(author)
     body.addContent(' ')
+    body.addContent(sys.argv[2])
+    body.addContent(' ')
+    body.addContent(log)
+
+    html = message.addElement('html')
+
+    body = html.addElement('body')
+    body.addContent(author)
+    body.addContent(' ')
 
     a = body.addElement('a')
     a['href'] = 'http://code.google.com/p/qubit-toolkit/source/detail?r=' + sys.argv[2]
