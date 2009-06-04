@@ -37,7 +37,7 @@ class Jabber:
     body.addContent(' ')
     body.addContent(log)
 
-    html = message.addElement('html')
+    html = message.addElement(('http://jabber.org/protocol/xhtml-im', 'html'))
 
     body = html.addElement('body')
     body.addContent(author)
