@@ -27,11 +27,19 @@ class Jabber:
     if 80 < len(log):
       log = log[:77] + '...'
 
-    content = author + ' <a href="http://code.google.com/p/qubit-toolkit/source
-
     message = domish.Element((None, 'message'))
     message['to'] = element['from']
-    message.addElement('body', content=content)
+
+    body = message.addElement('body')
+    body.addContent(author)
+    body.addContent(' ')
+
+    a = body.addElement('a')
+    a['href'] = 'http://code.google.com/p/qubit-toolkit/source/detail?r=' + sys.argv[2]
+    a.addContent(sys.argv[2])
+
+    body.addContent(' ')
+    body.addContent(log)
 
     self.xmlstream.send(message)
 
