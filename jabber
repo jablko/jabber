@@ -27,7 +27,7 @@ class Jabber:
     if 80 < len(log):
       log = log[:77] + '...'
 
-    content = author + ' * r' + sys.argv[2] + ' ' + log
+    content = author + ' <a href="http://code.google.com/p/qubit-toolkit/source
 
     message = domish.Element((None, 'message'))
     message['to'] = element['from']
