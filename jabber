@@ -78,23 +78,22 @@ class Jabber:
     reactor.stop()
 
 # Check arguments and print usage
-if 5 != len(sys.argv):
+if 3 != len(sys.argv):
   print """
 %s requires four arguments,
 
   [1] REPOS-PATH   (the path to the repository)
   [2] REV          (the number of the revision)
-  [3] EMAIL        (the Google account email)
-  [4] PASSWORD     (the Google account password)
 """ % sys.argv[0]
 
   sys.exit(1)
 
 jabber = Jabber()
 
-jid = jid.JID(sys.argv[3])
+jid = jid.JID('administrator@example.com')
+password = 'example'
 
-factory = client.XMPPClientFactory(jid, sys.argv[4])
+factory = client.XMPPClientFactory(jid, password)
 factory.addBootstrap(xmlstream.INIT_FAILED_EVENT, jabber.initFailed)
 factory.addBootstrap(xmlstream.STREAM_AUTHD_EVENT, jabber.authd)
 factory.addBootstrap(xmlstream.STREAM_CONNECTED_EVENT, jabber.connected)
