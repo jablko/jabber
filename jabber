@@ -18,8 +18,8 @@ class Jabber:
   def presence(self, element):
 
     # Open Subversion repository
-    repos = svn.repos.svn_repos_open(sys.argv[1])
-    fs = svn.repos.svn_repos_fs(repos)
+    repos = svn.repos.open(sys.argv[1])
+    fs = svn.repos.fs(repos)
 
     author = svn.fs.revision_prop(fs, int(sys.argv[2]), svn.core.SVN_PROP_REVISION_AUTHOR).decode('utf-8')
     log = svn.fs.revision_prop(fs, int(sys.argv[2]), svn.core.SVN_PROP_REVISION_LOG).decode('utf-8')
