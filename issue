@@ -1,0 +1,94 @@
+#!/usr/bin/env python
+
+import email.Parser, re, sys
+from twisted.internet import reactor
+from twisted.words.protocols.jabber import client, jid, xmlstream
+from twisted.words.xish import domish
+
+def rawDataIn(data):
+  print 'RECV: ' + data
+
+def rawDataOut(data):
+  print 'SEND: ' + data
+
+class Jabber:
+  def initFailed(self, failure):
+    self.xmlstream.sendFooter()
+
+  def presence(self, element):
+    parser = email.Parser.Parser()
+    message = parser.parse(sys.stdin)
+
+    match = re.search('^Issue (\\d+)', message['subject'])
+    issue = match.group(1)
+
+    match = re.search('^(?:New|Comment #(?:\\d+) on) issue ' + issue + ' by (.+?):.*?\n\n(.+?)\n\n--', message.get_payload(), re.M | re.S)
+    author = match.group(1)
+    comment = match.group(2)
+
+    if 80 < len(comment):
+      comment = comment[:77] + '...'
+
+    message = domish.Element((None, 'message'))
+    message['to'] = element['from']
+
+    body = message.addElement('body')
+    body.addContent(author)
+    body.addContent(' ')
+    body.addContent(issue)
+    body.addContent(' ')
+    body.addContent(comment)
+
+    html = message.addElement(('http://jabber.org/protocol/xhtml-im', 'html'))
+
+    body = html.addElement('body')
+    body.addContent(author)
+    body.addContent(' ')
+
+    a = body.addElement('a')
+    a['href'] = 'http://code.google.com/p/qubit-toolkit/issues/detail?id=' + issue
+    a.addContent(issue)
+
+    body.addContent(' ')
+    body.addContent(comment)
+
+    self.xmlstream.send(message)
+
+    self.xmlstream.sendFooter()
+
+  def authd(self, xmlstream):
+    self.xmlstream = xmlstream
+
+    self.xmlstream.addObserver('/presence', self.presence)
+
+    presence = domish.Element((None, 'presence'))
+
+    self.xmlstream.send(presence)
+
+    # Timeout
+    reactor.callLater(5, self.xmlstream.sendFooter)
+
+  def connected(self, xmlstream):
+    self.xmlstream = xmlstream
+
+    self.xmlstream.rawDataInFn = rawDataIn
+    self.xmlstream.rawDataOutFn = rawDataOut
+
+  def end(self, xmlstream):
+    self.xmlstream = xmlstream
+
+    reactor.stop()
+
+jabber = Jabber()
+
+jid = jid.JID('administrator@example.com')
+password = 'example'
+
+factory = client.XMPPClientFactory(jid, password)
+factory.addBootstrap(xmlstream.INIT_FAILED_EVENT, jabber.initFailed)
+factory.addBootstrap(xmlstream.STREAM_AUTHD_EVENT, jabber.authd)
+factory.addBootstrap(xmlstream.STREAM_CONNECTED_EVENT, jabber.connected)
+factory.addBootstrap(xmlstream.STREAM_END_EVENT, jabber.end)
+
+reactor.connectTCP('talk.google.com', 5222, factory)
+reactor.run()
